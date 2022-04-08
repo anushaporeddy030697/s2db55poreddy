@@ -1,0 +1,33 @@
+extends layout
+block content
+  h1= title
+  p Welcome to the order 
+  div(class="container-fluid")
+        div(class="row")
+            -
+                let order = [
+                    {
+                        "Itemname": "Biryani",
+                        "Quantity": 22,
+                        "price": "Five USD"
+                    },
+                    {
+                        "Itemname": "Samosa",
+                        "Quantity": 40,
+                        "price": "Twenty USD"
+                    },
+                    {
+                        "Itemname": "Bajji",
+                        "Quantity": 15,
+                        "price": "Twenty Two USD"
+                    },                   
+                ]
+            each v,index in order
+                div(class="col-sm-2" onclick=`buy(${index})`) #{v.Itemname}
+                div(class="col-sm-2" onclick=`buy(${index})`) #{v.Quantity}
+                div(class="col-sm-2" onclick=`buy(${index})`) #{v.price}
+  script.                
+        function buy(intemNo)
+        {
+              alert(`you purchased Item ${intemNo+1}`)
+        }
