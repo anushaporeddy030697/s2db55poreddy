@@ -2,18 +2,35 @@ var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
+var passport = require('passport'); 
+var LocalStrategy = require('passport-local').Strategy; 
 var logger = require('morgan');
 
-const connectionString = "mongodb+srv://anusha:anusha@cluster0.ohdbg.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
-mongoose = require('mongoose');
-mongoose.connect(connectionString,
-  { useNewUrlParser: true, useUnifiedTopology: true });
+passport.use(new LocalStrategy( 
+  function(username, password, done) { 
+    Account.findOne({ username: username }, function (err, user) { 
+      if (err) { return done(err); } 
+      if (!user) { 
+        return done(null, false, { message: 'Incorrect username.' }); 
+      } 
+      if (!user.validPassword(password)) { 
+        return done(null, false, { message: 'Incorrect password.' }); 
+      } 
+      return done(null, user); 
+    }); 
+  }))
 
-var Costume = require("./models/costume");
-var Mobile = require("./models/mobile");
+const connectionString =  
+process.env.MONGO_CON 
+mongoose = require('mongoose'); 
+mongoose.connect(connectionString,  
+{useNewUrlParser: true, 
+useUnifiedTopology: true}); 
+
+var mobile = require("./models/mobile");
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
-var mobilesRouter = require('./routes/mobiles');
+var mobileRouter = require('./routes/mobile');
 var addmodsRouter = require('./routes/addmods');
 var selectorRouter = require('./routes/selector');
 var resourceRouter = require('./routes/resource');
@@ -23,20 +40,36 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 
-var orderRouter = require('./routes/order');
-app.use('/order', orderRouter);
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(require('express-session')({ 
+  secret: 'keyboard cat', 
+  resave: false, 
+  saveUninitialized: false 
+})); 
+app.use(passport.initialize()); 
+app.use(passport.session()); 
 app.use(express.static(path.join(__dirname, 'public')));
+
+
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-app.use('/mobiles', mobilesRouter);
+app.use('/mobile', mobileRouter);
 app.use('/addmods', addmodsRouter);
 app.use('/selector', selectorRouter)
 app.use('/resource', resourceRouter);
+
+// passport config 
+// Use the existing connection 
+// The Account model  
+var Account =require('./models/account'); 
+ 
+passport.use(new LocalStrategy(Account.authenticate())); 
+passport.serializeUser(Account.serializeUser()); 
+passport.deserializeUser(Account.deserializeUser()); 
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -48,8 +81,7 @@ app.use(function (err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
+// render the error page
   res.status(err.status || 500);
   res.render('error');
 });
@@ -58,65 +90,29 @@ module.exports = app;
 
 /// We can seed the collection if needed on server start
 async function recreateDB() {
-  // Delete everything
-  await Costume.deleteMany();
+  
 
-  let instance1 = new Costume({ costume_type: "Mummy", size: 'large', cost: 25.4 });
-  instance1.save(function (err, doc) {
-    if (err) return console.error(err);
-    console.log("First object saved in Costume")
-  });
-
-  let instance2 = new Costume({ costume_type: "Dog", size: 'small', cost: 16 });
-  instance2.save(function (err, doc) {
-    if (err) return console.error(err);
-    console.log("Second object saved in Costume")
-  });
-
-  let instance3 = new Costume({ costume_type: "Superman", size: 'medium', cost: 12.4 });
-  instance3.save(function (err, doc) {
-    if (err) return console.error(err);
-    console.log("Third object saved in Costume")
-  });
-
-  let instance4 = new Costume({ costume_type: "Cat", size: 'large', cost: 22 });
-  instance4.save(function (err, doc) {
-    if (err) return console.error(err);
-    console.log("Fourth object saved in Costume")
-  });
 
 // Delete everything in Mobile
-  await Mobile.deleteMany();
+  await mobile.deleteMany();
 
-  let instance5 = new Mobile({ mobile_brand: "Iphone", mobile_color: '13 max pro', mobile_cost: 6205 });
-  instance5.save(function (err, doc) {
+  let instance1 = new mobile({ mobile_brand: "Apple", mobile_color: 'Green', mobile_cost: 3205 });
+  instance1.save(function (err, doc) {
     if (err) return console.error(err);
     console.log("First object saved in Mobile")
   });
 
-  let instance6 = new Mobile({ mobile_brand: "Apple", mobile_color: 'Note 3', mobile_cost: 5207 });
-  instance6.save(function (err, doc) {
+  let instance2 = new mobile({ mobile_brand: "Red mi", mobile_color: 'Red', mobile_cost: 4207 });
+  instance2.save(function (err, doc) {
     if (err) return console.error(err);
     console.log("Second object saved in Mobile")
   });
 
-  let instance7 = new Mobile({ mobile_brand: "OnePlus", mobile_color: '9 pro', mobile_cost: 4034 });
-  instance7.save(function (err, doc) {
+  let instance3 = new mobile({ mobile_brand: "Ream me", mobile_color: 'Gray', mobile_cost: 3034 });
+  instance3.save(function (err, doc) {
     if (err) return console.error(err);
     console.log("Third object saved in Mobile")
-  });
-
-  let instance8 = new Mobile({ mobile_brand: "Sansui", mobile_color: 'XR 20', mobile_cost: 1950 });
-  instance8.save(function (err, doc) {
-    if (err) return console.error(err);
-    console.log("Fourth object saved in Mobile")
   });
 }
 let reseed = true;
 if (reseed) { recreateDB(); }
-
-//Get the default connection
-var db = mongoose.connection;
-//Bind connection to error event
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-db.once("open", function () { console.log("Connection to DB succeeded") });
